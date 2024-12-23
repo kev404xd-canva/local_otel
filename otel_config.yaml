@@ -1,0 +1,56 @@
+receivers:
+  prometheus:
+    config:
+      global:
+        scrape_interval: 5s 
+      scrape_configs:
+        - job_name: 'blackbox' # To get metrics about the exporter itself
+          metrics_path: /metrics
+          static_configs:
+            - targets:
+                - localhost:9115
+        - job_name: 'blackbox_http' # To get metrics about the HTTP_SD targets
+          metrics_path: /probe
+          params:
+            module: [http_2xx]
+          http_sd_configs:
+            - url: http://localhost:8080/netprobe-target 
+              refresh_interval: 5m
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: localhost:9115 # The blackbox exporter’s real hostname:port.
+
+exporters:
+  otlp:
+    endpoint: "http://localhost:8080/export" # Send to Observability platform
+    balancer_name: round_robin
+    sending_queue:
+      enabled: true
+      queue_size: 200
+    retry_on_failure:
+      enabled: false
+
+processors:
+  batch:
+
+  memory_limiter:
+    limit_percentage: 80
+    spike_limit_percentage: 25
+    check_interval: 5s
+
+  attributes/standard_tags:
+
+  resource/common:
+
+  resourcedetection:
+
+service:
+  pipelines:
+    metrics/mimir:
+      receivers: [prometheus]
+      processors: [memory_limiter, attributes/standard_tags, resource/common, resourcedetection, batch]
+      exporters: [otlp]

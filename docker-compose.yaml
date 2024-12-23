@@ -1,0 +1,20 @@
+# Incomplete
+otel-collector:
+  image: otel/opentelemetry-collector-contrib
+  volumes:
+    - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+  ports:
+    - 1888:1888 # pprof extension
+    - 8888:8888 # Prometheus metrics exposed by the Collector
+    - 8889:8889 # Prometheus exporter metrics
+    - 13133:13133 # health_check extension
+    - 4317:4317 # OTLP gRPC receiver
+    - 4318:4318 # OTLP http receiver
+    - 55679:55679 # zpages extension
+
+bb-exporter:
+  image: prom/blackbox-exporter
+  volumes:
+    - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml
+  ports:
+    - 9115:9115
